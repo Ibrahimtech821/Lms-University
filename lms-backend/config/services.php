@@ -13,7 +13,10 @@ return [
     | a conventional file to locate the various service credentials.
     |
     */
-
+    'ai' => [
+        'url' => env('AI_SERVICE_URL'),
+        'internal_key' => env('AI_INTERNAL_KEY'),
+    ],
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

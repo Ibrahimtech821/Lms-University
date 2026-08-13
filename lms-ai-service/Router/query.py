@@ -62,7 +62,7 @@ def query(payload:Queryrequest,x_internal_key:str=Header(None)):
     prompt=ChatPromptTemplate.from_template("""
 
     you are an AI assistant you try help students in understanding the course lectures and give them clear explaination to all things they ask about , 
-    give answer only based on the context and if you don't know just say I don't Know 😊
+    give answer only based on the context and  and try to be more intellgent not so strict if he change a word or miss vocab try to predict it based on the content ,if you don't know just say I don't Know 😊
 
     context:{context}
 

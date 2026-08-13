@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AIController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\SlideController;
@@ -21,6 +22,8 @@ Route::middleware('auth:sanctum')->group(function(){
  Route::apiResource("slides",SlideController::class)
         ->only(['index','show']);
  Route::get('/courses/{course}/slides',[SlideController::class,'slidessofcourse']);
+ Route::post('/ai/query', [AIController::class, 'query']);
+ Route::post('/ai/summarize', [AIController::class, 'summarize']);
 
 
 Route::middleware("role")->group(function (){

@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\SlideRequest;
 use App\Models\Course;
 use App\Models\Slide;
+use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Symfony\Component\HttpFoundation\Test\Constraint\ResponseIsSuccessful;
 
 class SlideController extends Controller
 {
@@ -32,10 +35,48 @@ class SlideController extends Controller
         unset($data['file']);
 
         $slide = Slide::create($data);
-        
+
+        $slide->update([
+            'status'=>"processing"
+        ]);
+
+        try{
+
+            $response=Http::withHeaders([
+            'x-internal-key' => config('services.ai.internal_key'),
+                    ])->post(
+                        config('services.ai.url') . '/ingest',
+                    [
+                        'document_id' => $slide->id,
+                        'course_id' => $slide->course_id,
+                        'file_path' => storage_path(
+                            'app/public/' . $slide->storage_path
+                        ),
+                    ]
+                );
+
+            if($response->successful()){
+                $slide->update([
+                    'status'=>'done'
+                ]);
+            }
+            else{
+                $slide->update([
+                    'status'=>'failed'
+                ]);
+            }
+
+        }
+        catch (\Exception $e) {
+
+            $slide->update([
+                'status' => 'failed'
+            ]);
+
+        }
         return response()->json(["message"=> "created successfully "
         , "data"=> $slide],201);
-    }
+        }
 
     /**
      * Display the specified resource.
