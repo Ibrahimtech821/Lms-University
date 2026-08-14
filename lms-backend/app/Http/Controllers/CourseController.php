@@ -15,7 +15,7 @@ class CourseController extends Controller
      */
     public function index()
     {
-        $allCourse=Course::all();
+        $allCourse=Course::withCount('slides')->get();
         return response()->json($allCourse,200);
     }
 

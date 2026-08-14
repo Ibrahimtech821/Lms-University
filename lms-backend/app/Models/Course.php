@@ -10,9 +10,9 @@ class Course extends Model
     protected $table='courses';
     protected $guarded = ['id'];
 
-    public function slides(): HasMany
+   public function slides(): HasMany
     {
-        return $this->hasMany(Slide::class,"slides","course_id");
+        return $this->hasMany(Slide::class, 'course_id', 'id');
     }
 
 

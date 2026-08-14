@@ -19,6 +19,9 @@ class AuthController extends Controller
         "data" => $request->user()
     ], 200);
     }
+
+
+    
     public function login(LoginRequest $request){
         $credentials=$request->validated();
         if(!Auth::attempt($credentials)){
@@ -57,17 +60,7 @@ class AuthController extends Controller
         
     }
 
-    public function registeradmin(RegisterRequest $request){
 
-        $user=User::create([
-            'name'=> $request->name,
-            'email'=>$request->email,
-            'password'=>Hash::make($request->password),
-            'role'=>'Admin'
-        ]);
-
-        return response()->json(["message"=>"the user created sucessfully",
-                                    "data"=>$user],201);
         
-    }
+    
 }
