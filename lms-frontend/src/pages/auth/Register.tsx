@@ -67,7 +67,7 @@ export default function Register({ onGoLogin }: RegisterProps) {
                 required
                 value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder="Alex Chen"
+                placeholder="Enter your full name"
                 className="w-full h-10 rounded-lg border border-[#DEE5F0] bg-[#F8FAFB] px-3 text-sm text-[#0D1B2E] placeholder-[#9BAABF] focus:outline-none focus:ring-2 focus:ring-[#1C3D6E]/25 focus:border-[#1C3D6E] transition-all"
               />
             </div>

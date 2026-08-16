@@ -29,9 +29,20 @@ interface SidebarProps {
   isAdmin: boolean;
   isOpen: boolean;
   onClose: () => void;
+  user: {
+    name: string;
+    role: string;
+  } | null;
 }
 
-export function Sidebar({ activePage, onNavigate, isAdmin, isOpen, onClose }: SidebarProps) {
+export function Sidebar({
+  activePage,
+  onNavigate,
+  isAdmin,
+  isOpen,
+  onClose,
+  user,
+}: SidebarProps) {
   const nav = isAdmin ? adminNav : studentNav;
 
   const isActive = (id: Page) => {
@@ -103,16 +114,22 @@ export function Sidebar({ activePage, onNavigate, isAdmin, isOpen, onClose }: Si
 
         {/* User */}
         <div className="px-4 py-4 border-t border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#E07B39] flex items-center justify-center text-xs font-bold flex-shrink-0">
-              AC
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium truncate">Alex Chen</p>
-              <p className="text-xs text-white/50 truncate">3rd Year · CS</p>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-[#E07B39] flex items-center justify-center text-xs font-bold flex-shrink-0">
+            {user?.name?.charAt(0).toUpperCase() ?? "U"}
+          </div>
+
+          <div className="min-w-0">
+            <p className="text-sm font-medium truncate">
+              {user?.name ?? "User"}
+            </p>
+
+            <p className="text-xs text-white/50 truncate">
+              {user?.role ?? "User"}
+            </p>
           </div>
         </div>
+      </div>
       </aside>
     </>
   );

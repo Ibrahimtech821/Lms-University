@@ -9,6 +9,8 @@ import {
   type ApiSlide,
 } from "../services/api";
 
+import ReactMarkdown from "react-markdown";
+
 interface AIAssistantProps {
   initialCourseId?: string;
   initialLectureId?: string;
@@ -27,9 +29,6 @@ type Scope =
       lectureId: string;
       courseTitle?: string;
       lectureTitle?: string;
-    }
-  | {
-      type: "general";
     };
 
 interface Message {
@@ -69,6 +68,7 @@ function CourseScopeItem({
   return (
     <div>
       <div className="flex items-center">
+        {/* COURSE */}
         <button
           className="flex-1 flex items-center gap-3 px-3 py-2.5 hover:bg-[#F4F6FA] text-left transition-colors"
           onClick={() => {
@@ -98,19 +98,25 @@ function CourseScopeItem({
             </p>
           </div>
 
-          {scope.type === "course" && scope.courseId === courseId && (
-            <span className="ml-auto text-[#1C3D6E] flex-shrink-0">
-              <Icons.Check />
-            </span>
-          )}
+          {scope.type === "course" &&
+            scope.courseId === courseId && (
+              <span className="ml-auto text-[#1C3D6E] flex-shrink-0">
+                <Icons.Check />
+              </span>
+            )}
         </button>
 
+        {/* EXPAND SLIDES */}
         <button
           className="w-9 h-full flex items-center justify-center text-[#9BAABF] hover:text-[#1C3D6E] hover:bg-[#EEF2F8] transition-colors flex-shrink-0 self-stretch"
           onClick={() =>
-            setExpandedCourseId(isExpanded ? null : courseId)
+            setExpandedCourseId(
+              isExpanded ? null : courseId
+            )
           }
-          title={isExpanded ? "Hide slides" : "Show slides"}
+          title={
+            isExpanded ? "Hide slides" : "Show slides"
+          }
         >
           <span
             className={`transition-transform duration-150 ${
@@ -122,6 +128,7 @@ function CourseScopeItem({
         </button>
       </div>
 
+      {/* SLIDES */}
       {isExpanded && (
         <div className="border-t border-[#F0F4F8] bg-[#FAFBFD]">
           {courseLectures.map((lecture: ApiSlide) => {
@@ -190,21 +197,14 @@ function ScopeIndicator({
   const [open, setOpen] = useState(false);
 
   const [expandedCourseId, setExpandedCourseId] =
-    useState<string | null>(
-      scope.type !== "general" ? scope.courseId : null
-    );
+    useState<string | null>(scope.courseId);
 
-  const course =
-    scope.type !== "general"
-      ? courses.find(
-          (c) => String(c.id) === scope.courseId
-        )
-      : null;
+  const course = courses.find(
+    (c) => String(c.id) === scope.courseId
+  );
 
   const label =
-    scope.type === "general"
-      ? "All Courses"
-      : scope.type === "lecture"
+    scope.type === "lecture"
       ? scope.lectureTitle ?? "Lecture"
       : scope.courseTitle ??
         course?.Name ??
@@ -246,39 +246,7 @@ function ScopeIndicator({
               Ask about…
             </div>
 
-            {/* All Courses */}
-            <button
-              className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[#F4F6FA] text-left transition-colors"
-              onClick={() => {
-                onChangeScope({
-                  type: "general",
-                });
-
-                setOpen(false);
-              }}
-            >
-              <div className="w-7 h-7 rounded-lg bg-[#EEF2F8] flex items-center justify-center text-[#1C3D6E] flex-shrink-0">
-                <Icons.Sparkle />
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-[#0D1B2E]">
-                  All Courses
-                </p>
-
-                <p className="text-xs text-[#9BAABF]">
-                  General AI assistance
-                </p>
-              </div>
-
-              {scope.type === "general" && (
-                <span className="ml-auto text-[#1C3D6E] flex-shrink-0">
-                  <Icons.Check />
-                </span>
-              )}
-            </button>
-
-            {/* Courses */}
+            {/* COURSES */}
             {courses.slice(0, 4).map((course) => (
               <CourseScopeItem
                 key={course.id}
@@ -289,7 +257,9 @@ function ScopeIndicator({
                   setOpen(false);
                 }}
                 expandedCourseId={expandedCourseId}
-                setExpandedCourseId={setExpandedCourseId}
+                setExpandedCourseId={
+                  setExpandedCourseId
+                }
               />
             ))}
           </div>
@@ -303,12 +273,16 @@ function ScopeIndicator({
 /* Message Bubble                                                             */
 /* -------------------------------------------------------------------------- */
 
-function MessageBubble({
+ function MessageBubble({
   message,
 }: {
   message: Message;
 }) {
   const isUser = message.role === "user";
+
+  /* ---------------------------------------------------------------------- */
+  /* USER MESSAGE                                                           */
+  /* ---------------------------------------------------------------------- */
 
   if (isUser) {
     return (
@@ -322,23 +296,117 @@ function MessageBubble({
     );
   }
 
+  /* ---------------------------------------------------------------------- */
+  /* AI MESSAGE                                                             */
+  /* ---------------------------------------------------------------------- */
+
   return (
     <div className="flex gap-3 mb-5">
+      {/* AI icon */}
       <div className="w-7 h-7 rounded-full bg-[#1C3D6E]/10 flex items-center justify-center text-[#1C3D6E] flex-shrink-0 mt-0.5">
         <Icons.Sparkle />
       </div>
 
       <div className="flex-1 min-w-0">
+        {/* AI name */}
         <p className="text-xs font-medium text-[#5A6A82] mb-1.5">
           AI Assistant
         </p>
 
+        {/* AI response */}
         <div className="bg-white border border-[#DEE5F0] rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
-          <p className="text-sm text-[#3A4A5E] leading-relaxed whitespace-pre-wrap">
-            {message.content}
-          </p>
+          <div className="text-sm text-[#3A4A5E] leading-relaxed">
+            <ReactMarkdown
+              components={{
+                /* Paragraph */
+                p: ({ children }) => (
+                  <p className="mb-3 last:mb-0">
+                    {children}
+                  </p>
+                ),
+
+                /* Bold */
+                strong: ({ children }) => (
+                  <strong className="font-semibold text-[#0D1B2E]">
+                    {children}
+                  </strong>
+                ),
+
+                /* Italic */
+                em: ({ children }) => (
+                  <em className="italic">
+                    {children}
+                  </em>
+                ),
+
+                /* Unordered list */
+                ul: ({ children }) => (
+                  <ul className="list-disc pl-5 mb-3 space-y-1">
+                    {children}
+                  </ul>
+                ),
+
+                /* Ordered list */
+                ol: ({ children }) => (
+                  <ol className="list-decimal pl-5 mb-3 space-y-1">
+                    {children}
+                  </ol>
+                ),
+
+                /* List item */
+                li: ({ children }) => (
+                  <li className="leading-relaxed">
+                    {children}
+                  </li>
+                ),
+
+                /* H1 */
+                h1: ({ children }) => (
+                  <h1 className="text-lg font-bold text-[#0D1B2E] mb-3">
+                    {children}
+                  </h1>
+                ),
+
+                /* H2 */
+                h2: ({ children }) => (
+                  <h2 className="text-base font-bold text-[#0D1B2E] mb-2">
+                    {children}
+                  </h2>
+                ),
+
+                /* H3 */
+                h3: ({ children }) => (
+                  <h3 className="text-sm font-bold text-[#0D1B2E] mb-2">
+                    {children}
+                  </h3>
+                ),
+
+                /* Inline code */
+                code: ({ children }) => (
+                  <code className="bg-[#F4F6FA] px-1.5 py-0.5 rounded text-xs font-mono">
+                    {children}
+                  </code>
+                ),
+
+                /* Blockquote */
+                blockquote: ({ children }) => (
+                  <blockquote className="border-l-4 border-[#1C3D6E]/30 pl-3 my-3 text-[#5A6A82]">
+                    {children}
+                  </blockquote>
+                ),
+
+                /* Horizontal line */
+                hr: () => (
+                  <hr className="my-4 border-[#DEE5F0]" />
+                ),
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          </div>
         </div>
 
+        {/* Timestamp */}
         <p className="text-xs text-[#9BAABF] mt-1.5">
           {message.timestamp.toLocaleTimeString([], {
             hour: "2-digit",
@@ -388,12 +456,6 @@ export default function AIAssistant({
   initialCourseId,
   initialLectureId,
 }: AIAssistantProps) {
-  /*
-   * courses is ALWAYS ApiCourse[] here.
-   *
-   * If the API returns null while loading,
-   * [] will be used instead.
-   */
   const { data: coursesData } = useApi(
     () => coursesApi.list(),
     []
@@ -412,13 +474,11 @@ export default function AIAssistant({
           courseId: initialCourseId,
           lectureId: initialLectureId,
         }
-      : initialCourseId
-      ? {
-          type: "course",
-          courseId: initialCourseId,
-        }
       : {
-          type: "general",
+          type: "course",
+          courseId: initialCourseId ?? String(
+            courses[0]?.id ?? ""
+          ),
         };
 
   const [scope, setScope] =
@@ -428,15 +488,23 @@ export default function AIAssistant({
   /* Messages                                                               */
   /* ---------------------------------------------------------------------- */
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content:
-        "Hello! Ask me anything about your course materials.",
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] =
+    useState<Message[]>([
+      {
+        id: "welcome",
+        role: "assistant",
+        content:
+          "Hello! Ask me anything about your course materials.",
+        timestamp: new Date(),
+      },
+    ]);
+
+  /*
+   * One conversation ID stays the same while chatting.
+   * New chat creates a new conversation ID.
+   */
+  const [conversationId, setConversationId] =
+    useState(() => Date.now());
 
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -448,7 +516,7 @@ export default function AIAssistant({
     useRef<HTMLTextAreaElement>(null);
 
   /* ---------------------------------------------------------------------- */
-  /* Scroll to latest message                                               */
+  /* Scroll                                                                  */
   /* ---------------------------------------------------------------------- */
 
   useEffect(() => {
@@ -462,10 +530,6 @@ export default function AIAssistant({
   /* ---------------------------------------------------------------------- */
 
   const getScopeBanner = () => {
-    if (scope.type === "general") {
-      return null;
-    }
-
     const course = courses.find(
       (c) => String(c.id) === scope.courseId
     );
@@ -506,7 +570,6 @@ export default function AIAssistant({
 
     setInput("");
 
-    /* Add user message immediately */
     const userMsg: Message = {
       id: Date.now().toString(),
       role: "user",
@@ -524,60 +587,36 @@ export default function AIAssistant({
 
     try {
       /*
-       * Start with the question.
-       *
-       * General:
-       * {
-       *   question: "..."
-       * }
+       * IMPORTANT:
        *
        * Course:
-       * {
-       *   question: "...",
-       *   course_id: 1
-       * }
+       * question + course_id + conversation_id
        *
        * Lecture:
-       * {
-       *   question: "...",
-       *   course_id: 1,
-       *   slide_id: 5
-       * }
+       * question + course_id + slide_id + conversation_id
        */
 
       const payload: Parameters<
         typeof aiApi.query
       >[0] = {
         question: msg,
+        course_id: Number(scope.courseId),
+        conversation_id: conversationId,
+
+        /*
+         * Your AiQueryPayload currently requires slide_id.
+         *
+         * We don't put it here because a course question
+         * does NOT have a slide.
+         */
       };
 
-      if (scope.type === "course") {
-        payload.course_id = Number(
-          scope.courseId
-        );
-      }
-
+      /* Only lecture questions receive slide_id */
       if (scope.type === "lecture") {
-        payload.course_id = Number(
-          scope.courseId
-        );
-
         payload.slide_id = Number(
           scope.lectureId
         );
       }
-
-      /*
-       * React
-       *   ↓
-       * Laravel /ai/query
-       *   ↓
-       * Python FastAPI
-       *   ↓
-       * RAG
-       *   ↓
-       * AI response
-       */
 
       const res = await aiApi.query(payload);
 
@@ -633,10 +672,15 @@ export default function AIAssistant({
   };
 
   /* ---------------------------------------------------------------------- */
-  /* Clear conversation                                                     */
+  /* New conversation                                                       */
   /* ---------------------------------------------------------------------- */
 
   const clearConversation = () => {
+    /*
+     * Generate a NEW conversation ID.
+     */
+    setConversationId(Date.now());
+
     setMessages([
       {
         id: "welcome",
@@ -746,9 +790,7 @@ export default function AIAssistant({
                 placeholder={
                   scope.type === "lecture"
                     ? "Ask about this lecture…"
-                    : scope.type === "course"
-                    ? "Ask about this course…"
-                    : "Ask anything about your courses…"
+                    : "Ask about this course…"
                 }
                 rows={1}
                 className="w-full rounded-xl border border-[#DEE5F0] bg-[#F8FAFB] px-4 py-3 text-sm text-[#0D1B2E] placeholder-[#9BAABF] focus:outline-none focus:ring-2 focus:ring-[#1C3D6E]/20 focus:border-[#1C3D6E] transition-all resize-none"

@@ -75,7 +75,7 @@ export default function AdminLectures() {
     try {
       const fd = new FormData();
       fd.append("file", selectedFile);
-      fd.append("title", slideTitle);
+      fd.append("name", slideTitle);
       fd.append("course_id", effectiveCourse);
 
       await slidesApi.create(fd);

@@ -23,7 +23,7 @@ class UpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-               'Name' => 'sometimes|string|min:3|max:255',
+               'Name' => 'sometimes|string|min:1|max:255',
                'Description' => 'sometimes|max:1000',
         ];
     }

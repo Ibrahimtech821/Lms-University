@@ -71,7 +71,7 @@ export default function AdminCourses() {
     }
   };
 
-  const CourseForm = () => (
+   const courseFormFields = (
     <div className="space-y-4">
       <div>
         <label className="block text-xs font-medium text-[#5A6A82] mb-1.5">Course Title *</label>
@@ -185,7 +185,7 @@ export default function AdminCourses() {
           </>
         }
       >
-        <CourseForm />
+        {courseFormFields}
       </Modal>
 
       {/* Edit Modal */}
@@ -202,7 +202,7 @@ export default function AdminCourses() {
           </>
         }
       >
-        <CourseForm />
+        {courseFormFields}
       </Modal>
 
       {/* Delete Confirm */}

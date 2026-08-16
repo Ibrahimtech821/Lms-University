@@ -42,8 +42,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
         <StatCard label="Enrolled Courses" value={loading ? "—" : courses?.length ?? 0} sub="This semester" icon={<Icons.Courses />} />
-        <StatCard label="Completed Slides" value="38" sub="Across all courses" icon={<Icons.Check />} />
-        <StatCard label="Avg. Progress" value="40%" sub="Across all courses" icon={<Icons.BookOpen />} />
       </div>
 
       {/* AI Quick Action */}
@@ -116,7 +114,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-[#0D1B2E] truncate">{course.Name}</p>
-                          <p className="text-xs text-[#5A6A82] mt-0.5">{instructorName(course)}</p>
                           {course.slides_count !== undefined && (
                             <p className="text-xs text-[#9BAABF] mt-0.5">{course.slides_count} slides</p>
                           )}

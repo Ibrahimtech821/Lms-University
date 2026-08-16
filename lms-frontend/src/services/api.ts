@@ -1,6 +1,15 @@
-const viteEnv = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env ?? {};
-const BASE_URL = (viteEnv.VITE_API_URL as string) || "/api";
+const viteEnv = (
+  import.meta as ImportMeta & {
+    env?: {
+      VITE_API_URL?: string;
+      VITE_DEV_SESSION_ID?: string;
+    };
+  }
+).env ?? {};
 
+const BASE_URL = viteEnv.VITE_API_URL || "/api";
+
+const DEV_SESSION_ID = viteEnv.VITE_DEV_SESSION_ID || "default";
 // ---- Token management ----
 export const getToken = () => localStorage.getItem("lms_token");
 export const setToken = (t: string) => localStorage.setItem("lms_token", t);
@@ -72,13 +81,16 @@ export type ApiSlide = {
 
 export type AiQueryPayload = {
   question: string;
-  course_id?: number;
+  course_id: number;
   slide_id?: number;
+  conversation_id: number;
+
+
 };
 
 export type AiSummarizePayload = {
-  slide_id?: number;
-  course_id?: number;
+  slide_id: number;
+  course_id: number;
 };
 
 // ---- Auth ----
@@ -89,15 +101,24 @@ export const auth = {
       body: JSON.stringify({ email, password }),
     }),
 
-  register: (name: string, email: string, password: string, password_confirmation: string) =>
+   register: (
+    name: string,
+    email: string,
+    password: string,
+    password_confirmation: string
+  ) =>
     apiFetch<{ token: string; user: ApiUser }>("/register", {
       method: "POST",
-      body: JSON.stringify({ name, email, password, password_confirmation }),
+      body: JSON.stringify({
+        name,
+        email,
+        password,
+        password_confirmation,
+      }),
     }),
 
   me: () => apiFetch<ApiUser>("/user"),
 };
-
 type AdminUsersResponse = {
   message: string;
   data: ApiUser[];
@@ -180,4 +201,6 @@ export const adminApi = {
       method: "POST",
       body: JSON.stringify(payload),
     })).data,
+  destroyUser: (id: number) =>
+  apiFetch<void>(`/admin/user/${id}`, { method: "DELETE" }),
 };

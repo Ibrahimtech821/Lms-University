@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Badge, Button, Card, Icons, Modal } from "../../components/ui";
 import { useApi } from "../../hooks/useApi";
+import { useAuth } from "../../context/AuthContext";
 import { adminApi, type ApiUser } from "../../services/api";
 
 export default function AdminUsers() {
   const { data: users, loading, error, refetch } = useApi(() => adminApi.listUsers(), []);
+  const { user, logout } = useAuth();
 
   const [showCreate, setShowCreate] = useState(false);
   const [viewUserId, setViewUserId] = useState<number | null>(null);
@@ -12,6 +14,23 @@ export default function AdminUsers() {
     () => (viewUserId ? adminApi.showUser(viewUserId) : Promise.resolve(null)),
     [viewUserId]
   );
+
+  const [deleteTarget, setDeleteTarget] = useState<ApiUser | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const handleDeleteUser = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    try {
+      await adminApi.destroyUser(deleteTarget.id);
+      refetch();
+      setDeleteTarget(null);
+    } catch (e: unknown) {
+      console.error(e);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -79,8 +98,15 @@ export default function AdminUsers() {
         </div>
       )}
 
+      <button
+        onClick={logout}
+        className="px-4 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors text-sm font-medium mb-4"
+      >
+        Log out
+      </button>
+
       <Card padding="none">
-        <div className="hidden sm:grid grid-cols-[80px_2fr_2fr_120px_80px] gap-4 px-5 py-3 border-b border-[#DEE5F0]">
+        <div className="hidden sm:grid grid-cols-[80px_2fr_2fr_120px_120px] gap-4 px-5 py-3 border-b border-[#DEE5F0]">
           {["ID", "Name", "Email", "Role", "Actions"].map(h => (
             <p key={h} className="text-xs font-semibold text-[#9BAABF] uppercase tracking-wider">{h}</p>
           ))}
@@ -97,22 +123,33 @@ export default function AdminUsers() {
         {(users ?? []).map((u, i, arr) => {
           const role = (u.role ?? "").toLowerCase();
           const badgeVariant = role === "admin" ? "error" : "info";
+          const isSelf = user?.id === u.id;
           return (
             <div
               key={u.id}
-              className={`grid grid-cols-1 sm:grid-cols-[80px_2fr_2fr_120px_80px] gap-2 sm:gap-4 items-start sm:items-center px-5 py-3 ${i < arr.length - 1 ? "border-b border-[#DEE5F0]" : ""}`}
+              className={`grid grid-cols-1 sm:grid-cols-[80px_2fr_2fr_120px_120px] gap-2 sm:gap-4 items-start sm:items-center px-5 py-3 ${i < arr.length - 1 ? "border-b border-[#DEE5F0]" : ""}`}
             >
               <p className="text-sm text-[#5A6A82]">#{u.id}</p>
               <p className="text-sm font-medium text-[#0D1B2E] truncate">{u.name}</p>
               <p className="text-sm text-[#5A6A82] truncate">{u.email}</p>
               <Badge variant={badgeVariant}>{role === "admin" ? "Admin" : "Student"}</Badge>
-              <button
-                onClick={() => setViewUserId(u.id)}
-                className="w-7 h-7 rounded-lg hover:bg-[#EEF2F8] flex items-center justify-center text-[#5A6A82] hover:text-[#1C3D6E] transition-colors"
-                title="View user"
-              >
-                <Icons.Eye />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setViewUserId(u.id)}
+                  className="w-7 h-7 rounded-lg hover:bg-[#EEF2F8] flex items-center justify-center text-[#5A6A82] hover:text-[#1C3D6E] transition-colors"
+                  title="View user"
+                >
+                  <Icons.Eye />
+                </button>
+                <button
+                  onClick={() => setDeleteTarget(u)}
+                  disabled={isSelf}
+                  title={isSelf ? "You can't delete your own account" : "Delete user"}
+                  className="w-7 h-7 rounded-lg hover:bg-red-50 flex items-center justify-center text-[#5A6A82] hover:text-red-600 transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                >
+                  <Icons.Trash />
+                </button>
+              </div>
             </div>
           );
         })}
@@ -213,6 +250,28 @@ export default function AdminUsers() {
             </div>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete User"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="danger" onClick={handleDeleteUser} disabled={deleteLoading}>
+              {deleteLoading ? "Deleting…" : "Delete User"}
+            </Button>
+          </>
+        }
+      >
+        <div className="text-center py-4">
+          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600 mx-auto mb-3">
+            <Icons.Trash />
+          </div>
+          <p className="text-sm font-medium text-[#0D1B2E]">Delete "{deleteTarget?.name}"?</p>
+          <p className="text-sm text-[#5A6A82] mt-1">This will permanently remove this user's account.</p>
+        </div>
       </Modal>
     </div>
   );

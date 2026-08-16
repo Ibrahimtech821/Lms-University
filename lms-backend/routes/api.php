@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/login',[AuthController::class,'login']);
 Route::post('/register',[AuthController::class,'register']);
+Route::post('/admin/register',[AdminController::class,'store']);
 
 Route::middleware('auth:sanctum')->group(function(){
  Route::get('/user', [AuthController::class, 'user']);
@@ -28,8 +29,8 @@ Route::middleware("role")->group(function (){
     Route::get('/admin/users',[AdminController::class,'index']);
     Route::get('/admin/user/{id}',[AdminController::class,'show']);
     Route::put('/admin/user/{id}',[AdminController::class,'update']);
-    Route::delete('/admin/user/{id}',[AdminController::class,'destroy']);
     Route::post('/admin/register',[AdminController::class,'store']);
+    Route::delete('/admin/user/{id}',[AdminController::class,'destroy']);
     Route::apiResource('courses', CourseController::class)
         ->only(['store', 'update', 'destroy']);
     Route::apiResource('slides',SlideController::class)

@@ -2,6 +2,7 @@ import { StatCard, Card, Badge, Icons } from "../../components/ui";
 import { useApi } from "../../hooks/useApi";
 import { coursesApi, slidesApi } from "../../services/api";
 import type { Page } from "../../components/Sidebar";
+import { useAuth } from "../../context/AuthContext";
 
 interface AdminDashboardProps {
   onNavigate: (page: Page) => void;

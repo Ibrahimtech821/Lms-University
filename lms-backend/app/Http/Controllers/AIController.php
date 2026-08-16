@@ -32,7 +32,7 @@ class AIController extends Controller
 
             [
                 'course_id' => $request->course_id,
-                'document_id' => $request->document_id, 
+                'document_id' => $request->slide_id, 
             ]
         
         

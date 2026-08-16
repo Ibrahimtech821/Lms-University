@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Card, Button, Badge, Icons } from "../components/ui";
+import { Card, Button, Badge, Modal, Icons } from "../components/ui";
 import { useApi } from "../hooks/useApi";
-import { coursesApi, slidesApi, type ApiCourse, type ApiSlide } from "../services/api";
+import { coursesApi, slidesApi, aiApi, type ApiCourse, type ApiSlide } from "../services/api";
 import type { Page } from "../components/Sidebar";
+import ReactMarkdown from "react-markdown";
 
 interface CourseDetailProps {
   courseId: string;
@@ -28,11 +29,33 @@ export default function CourseDetail({ courseId, onNavigate }: CourseDetailProps
   const { data: slides, loading: slidesLoading } = useApi(() => slidesApi.byCourse(id), [courseId]);
   const [selectedSlide, setSelectedSlide] = useState<ApiSlide | null>(null);
 
+  // Per-slide summarize state
+  const [summarizingId, setSummarizingId] = useState<number | null>(null);
+  const [summaryResult, setSummaryResult] = useState<{ slide: ApiSlide; summary: string } | null>(null);
+  const [summaryError, setSummaryError] = useState<{ slide: ApiSlide; message: string } | null>(null);
+
   const color = STATUS_COLOR[id % STATUS_COLOR.length];
   const accentColor = STATUS_ACCENT[id % STATUS_ACCENT.length];
 
   const doneSlides = (slides ?? []).filter(s => s.status === "done").length;
   const totalSlides = (slides ?? []).length;
+
+  const handleSummarizeSlide = async (slide: ApiSlide, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSummarizingId(slide.id);
+    setSummaryError(null);
+    try {
+      const res = await aiApi.summarize({ course_id: id, slide_id: slide.id });
+      setSummaryResult({ slide, summary: res.summary });
+    } catch (err: unknown) {
+      setSummaryError({
+        slide,
+        message: err instanceof Error ? err.message : "Failed to summarize this slide.",
+      });
+    } finally {
+      setSummarizingId(null);
+    }
+  };
 
   if (courseLoading) {
     return (
@@ -106,11 +129,6 @@ export default function CourseDetail({ courseId, onNavigate }: CourseDetailProps
         >
           Ask AI About This Course
         </Button>
-        <Button variant="secondary" icon={<Icons.Sparkle />}
-          onClick={() => onNavigate("ai", { courseId, scope: "course" })}
-        >
-          Summarize Course
-        </Button>
       </div>
 
       {/* Slides */}
@@ -178,6 +196,13 @@ export default function CourseDetail({ courseId, onNavigate }: CourseDetailProps
                   {slide.status === "done" && (
                     <>
                       <button
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-xs font-medium text-[#1C3D6E] hover:underline disabled:opacity-50"
+                        onClick={e => handleSummarizeSlide(slide, e)}
+                        disabled={summarizingId === slide.id}
+                      >
+                        {summarizingId === slide.id ? "Summarizing…" : "Summarize"}
+                      </button>
+                      <button
                         className="opacity-0 group-hover:opacity-100 transition-opacity text-xs font-medium text-[#E07B39] hover:underline"
                         onClick={e => {
                           e.stopPropagation();
@@ -209,6 +234,45 @@ export default function CourseDetail({ courseId, onNavigate }: CourseDetailProps
           </Card>
         )}
       </div>
+
+      {/* Summary result modal */}
+      <Modal
+        open={!!summaryResult}
+        onClose={() => setSummaryResult(null)}
+        title={summaryResult ? `Summary — ${summaryResult.slide.name}` : "Summary"}
+        footer={<Button variant="ghost" onClick={() => setSummaryResult(null)}>Close</Button>}
+      >
+        {summaryResult && (
+          <div className="text-sm text-[#3A4A5E] leading-relaxed max-h-[60vh] overflow-y-auto">
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
+                strong: ({ children }) => <strong className="font-semibold text-[#0D1B2E]">{children}</strong>,
+                ul: ({ children }) => <ul className="list-disc pl-5 mb-3 space-y-1">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal pl-5 mb-3 space-y-1">{children}</ol>,
+                li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+              }}
+            >
+              {summaryResult.summary}
+            </ReactMarkdown>
+          </div>
+        )}
+      </Modal>
+
+      {/* Summary error modal */}
+      <Modal
+        open={!!summaryError}
+        onClose={() => setSummaryError(null)}
+        title="Couldn't summarize slide"
+        footer={<Button variant="ghost" onClick={() => setSummaryError(null)}>Close</Button>}
+      >
+        {summaryError && (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
+            <Icons.AlertCircle />
+            {summaryError.message}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
