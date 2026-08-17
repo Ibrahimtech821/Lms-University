@@ -29,15 +29,15 @@ def get_memory(conversation_id: int):
 
     return memories[conversation_id]
 
+embeddingmodel = HuggingFaceEmbeddings(
+    model_name="all-MiniLM-L6-v2"
+)
 
 
 @router.post('/query')
 def query(payload:Queryrequest,x_internal_key:str=Header(None)):
     if x_internal_key!=Internal_key:
             raise HTTPException(status_code=401)
-    embeddingmodel=HuggingFaceEmbeddings(
-            model_name="all-MiniLM-L6-v2"
-    )
     vectordb=Chroma(
          collection_name=f"course_{payload.course_id}",
          embedding_function=embeddingmodel,

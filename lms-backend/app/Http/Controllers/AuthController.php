@@ -28,10 +28,10 @@ class AuthController extends Controller
             return response(["message"=>"invalid credtails"] ,401);
         }
 
-        $user=User::where('email',$request->email)->FirstOrFail();
-        $token=$user->createToken('auth_token')->plainTextToken;
+      
+        $request->session()->regenerate();
 
-        return response(["message"=>"the user logged in","user"=>$user,"token"=>$token],200);
+        return response(["message"=>"the user logged in","user"=>Auth::user()],200);
 
 
 
@@ -52,7 +52,10 @@ class AuthController extends Controller
     }
 
     public function logout(Request $request){
-        $request->user()->currentAccessToken()->delete();
+
+      Auth::logout();
+      $request->session()->invalidate();
+      $request->session()->regenerateToken();
 
         return response()->json([
             "message" => "logged out successfully"

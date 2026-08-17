@@ -6,10 +6,13 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\SlideController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Session\Middleware\StartSession;
 
 
-Route::post('/login',[AuthController::class,'login']);
-Route::post('/register',[AuthController::class,'register']);
+Route::post('/login', [AuthController::class, 'login'])
+    ->middleware(StartSession::class);
+Route::post('/register', [AuthController::class, 'register']);
+
 Route::post('/admin/register',[AdminController::class,'store']);
 
 Route::middleware('auth:sanctum')->group(function(){

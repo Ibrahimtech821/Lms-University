@@ -2,53 +2,97 @@ const viteEnv = (
   import.meta as ImportMeta & {
     env?: {
       VITE_API_URL?: string;
-      VITE_DEV_SESSION_ID?: string;
     };
   }
 ).env ?? {};
 
 const BASE_URL = viteEnv.VITE_API_URL || "/api";
+const API_ORIGIN = BASE_URL.replace(/\/api\/?$/, "");
 
-const DEV_SESSION_ID = viteEnv.VITE_DEV_SESSION_ID || "default";
-// ---- Token management ----
-export const getToken = () => localStorage.getItem("lms_token");
-export const setToken = (t: string) => localStorage.setItem("lms_token", t);
-export const clearToken = () => localStorage.removeItem("lms_token");
+
+function getCookie(name: string): string | null {
+  const value = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(`${name}=`));
+
+  return value
+    ? decodeURIComponent(value.split("=")[1])
+    : null;
+}
 
 // ---- Base fetch ----
-async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getToken();
+async function apiFetch<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
   const isFormData = options.body instanceof FormData;
+
+  const xsrfToken = getCookie("XSRF-TOKEN");
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
+
+    credentials: "include",
+
     headers: {
       Accept: "application/json",
-      ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+
+      ...(isFormData
+        ? {}
+        : {
+            "Content-Type": "application/json",
+          }),
+
+      ...(xsrfToken
+        ? {
+            "X-XSRF-TOKEN": xsrfToken,
+          }
+        : {}),
+
       ...options.headers,
     },
   });
 
   if (res.status === 401) {
-    clearToken();
-    window.location.reload();
     throw new Error("Unauthenticated");
   }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    const msg = body?.message || body?.error || `HTTP ${res.status}`;
+
+    const msg =
+      body?.message ||
+      body?.error ||
+      `HTTP ${res.status}`;
+
     throw new Error(msg);
   }
 
-  // 204 No Content
-  if (res.status === 204) return undefined as T;
+  if (res.status === 204) {
+    return undefined as T;
+  }
 
   return res.json();
 }
+// ---- CSRF ----
+async function getCsrfCookie() {
+  const res = await fetch(
+    `${API_ORIGIN}/sanctum/csrf-cookie`,
+    {
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+      },
+    }
+  );
 
-// ---- Types matching typical Laravel responses ----
+  if (!res.ok) {
+    throw new Error("Could not initialize CSRF protection");
+  }
+}
+
+// ---- Types ----
+
 export type ApiUser = {
   id: number;
   name: string;
@@ -62,9 +106,11 @@ export type ApiCourse = {
   id: number;
   Name: string;
   Description: string;
-  instructor?: { id: number; name: string } | string;
+  instructor?: {
+    id: number;
+    name: string;
+  } | string;
   slides_count?: number;
-  // may also have pivot data for enrolled students
 };
 
 export type ApiSlide = {
@@ -84,8 +130,6 @@ export type AiQueryPayload = {
   course_id: number;
   slide_id?: number;
   conversation_id: number;
-
-
 };
 
 export type AiSummarizePayload = {
@@ -94,20 +138,40 @@ export type AiSummarizePayload = {
 };
 
 // ---- Auth ----
-export const auth = {
-  login: (email: string, password: string) =>
-    apiFetch<{ token: string; user: ApiUser }>("/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    }),
 
-   register: (
+export const auth = {
+  login: async (
+    email: string,
+    password: string
+  ) => {
+    // Get Laravel CSRF cookie first
+    await getCsrfCookie();
+
+    return apiFetch<{
+      message: string;
+      user: ApiUser;
+    }>("/login", {
+      method: "POST",
+      body: JSON.stringify({
+        email,
+        password,
+      }),
+    });
+  },
+
+  register: async (
     name: string,
     email: string,
     password: string,
     password_confirmation: string
-  ) =>
-    apiFetch<{ token: string; user: ApiUser }>("/register", {
+  ) => {
+    // Get Laravel CSRF cookie first
+    await getCsrfCookie();
+
+    return apiFetch<{
+      message: string;
+      user: ApiUser;
+    }>("/register", {
       method: "POST",
       body: JSON.stringify({
         name,
@@ -115,46 +179,70 @@ export const auth = {
         password,
         password_confirmation,
       }),
+    });
+  },
+
+  me: () =>
+    apiFetch<ApiUser>("/user"),
+
+  logout: () =>
+    apiFetch<{
+      message: string;
+    }>("/logout", {
+      method: "POST",
     }),
-
-  me: () => apiFetch<ApiUser>("/user"),
-};
-type AdminUsersResponse = {
-  message: string;
-  data: ApiUser[];
-};
-
-type AdminUserResponse = {
-  message: string;
-  data: ApiUser;
 };
 
 // ---- Courses ----
+
 export const coursesApi = {
-  list: () => apiFetch<ApiCourse[]>("/courses"),
-  show: (id: number) => apiFetch<ApiCourse>(`/courses/${id}`),
+  list: () =>
+    apiFetch<ApiCourse[]>("/courses"),
+
+  show: (id: number) =>
+    apiFetch<ApiCourse>(`/courses/${id}`),
+
   create: (data: Partial<ApiCourse>) =>
-    apiFetch<ApiCourse>("/courses", { method: "POST", body: JSON.stringify(data) }),
-  update: (id: number, data: Partial<ApiCourse>) =>
-    apiFetch<ApiCourse>(`/courses/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+    apiFetch<ApiCourse>("/courses", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  update: (
+    id: number,
+    data: Partial<ApiCourse>
+  ) =>
+    apiFetch<ApiCourse>(`/courses/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
   destroy: (id: number) =>
-    apiFetch<void>(`/courses/${id}`, { method: "DELETE" }),
+    apiFetch<void>(`/courses/${id}`, {
+      method: "DELETE",
+    }),
 };
 
 // ---- Slides ----
+
 export const slidesApi = {
-  list: () => apiFetch<ApiSlide[]>("/slides"),
+  list: () =>
+    apiFetch<ApiSlide[]>("/slides"),
 
   show: async (id: number): Promise<ApiSlide> => {
-    const response = await apiFetch<{ data: ApiSlide }>(`/slides/${id}`);
+    const response = await apiFetch<{
+      data: ApiSlide;
+    }>(`/slides/${id}`);
 
     return response.data;
   },
 
-  byCourse: async (courseId: number): Promise<ApiSlide[]> => {
-    const response = await apiFetch<{ data: ApiSlide[] }>(
-      `/courses/${courseId}/slides`
-    );
+  byCourse: async (
+    courseId: number
+  ): Promise<ApiSlide[]> => {
+    const response = await apiFetch<{
+      data: ApiSlide[];
+    }>(`/courses/${courseId}/slides`);
 
     return response.data;
   },
@@ -165,7 +253,10 @@ export const slidesApi = {
       body: formData,
     }),
 
-  update: (id: number, data: Partial<ApiSlide>) =>
+  update: (
+    id: number,
+    data: Partial<ApiSlide>
+  ) =>
     apiFetch<ApiSlide>(`/slides/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -178,6 +269,7 @@ export const slidesApi = {
 };
 
 // ---- AI ----
+
 export const aiApi = {
   query: (payload: AiQueryPayload) =>
     apiFetch<{ answer: string }>("/ai/query", {
@@ -186,21 +278,68 @@ export const aiApi = {
     }),
 
   summarize: (payload: AiSummarizePayload) =>
-    apiFetch<{ summary: string; concepts?: string[]; key_points?: string[]; definitions?: Array<{ term: string; definition: string }> }>("/ai/summarize", {
+    apiFetch<{
+      summary: string;
+      concepts?: string[];
+      key_points?: string[];
+      definitions?: Array<{
+        term: string;
+        definition: string;
+      }>;
+    }>("/ai/summarize", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
 };
 
 // ---- Admin users ----
+
+type AdminUsersResponse = {
+  message: string;
+  data: ApiUser[];
+};
+
+type AdminUserResponse = {
+  message: string;
+  data: ApiUser;
+};
+
 export const adminApi = {
-  listUsers: async () => (await apiFetch<AdminUsersResponse>("/admin/users")).data,
-  showUser: async (id: number) => (await apiFetch<AdminUserResponse>(`/admin/user/${id}`)).data,
-  registerAdmin: async (payload: { name: string; email: string; password: string; password_confirmation: string }) =>
-    (await apiFetch<AdminUserResponse>("/admin/register", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    })).data,
+  listUsers: async () =>
+    (
+      await apiFetch<AdminUsersResponse>(
+        "/admin/users"
+      )
+    ).data,
+
+  showUser: async (id: number) =>
+    (
+      await apiFetch<AdminUserResponse>(
+        `/admin/user/${id}`
+      )
+    ).data,
+
+  registerAdmin: async (payload: {
+    name: string;
+    email: string;
+    password: string;
+    password_confirmation: string;
+  }) =>
+    (
+      await apiFetch<AdminUserResponse>(
+        "/admin/register",
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        }
+      )
+    ).data,
+
   destroyUser: (id: number) =>
-  apiFetch<void>(`/admin/user/${id}`, { method: "DELETE" }),
+    apiFetch<void>(
+      `/admin/user/${id}`,
+      {
+        method: "DELETE",
+      }
+    ),
 };

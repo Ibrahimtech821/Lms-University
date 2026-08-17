@@ -14,12 +14,12 @@ router=APIRouter()
 class summarize(BaseModel):
     course_id:int
     document_id:int
+embeddingmodel=HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 @router.post("/summarize")
 def summarize(payload:summarize,x_internal_key:str=Header(None)):
     if x_internal_key != Internal_key:
         raise HTTPException(status_code=401)
-    embeddingmodel=HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     vectordb=Chroma(
         collection_name=f"course_{payload.course_id}",
         embedding_function=embeddingmodel,
